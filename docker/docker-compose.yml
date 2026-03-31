@@ -1,0 +1,110 @@
+version: "3.9"
+
+services:
+
+  # ─── PostgreSQL ──────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: netscout-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: netscout
+      POSTGRES_USER: netscout
+      POSTGRES_PASSWORD: netscout_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netscout"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─── Redis ───────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: netscout-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ─── Backend (FastAPI) ───────────────────────────────────
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: netscout-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://netscout:netscout_secret@postgres:5432/netscout
+      REDIS_URL: redis://redis:6379/0
+      AGENT_TOKEN: ${AGENT_TOKEN:-change-me-in-production}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      DEBUG: ${DEBUG:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Frontend (React + nginx) ────────────────────────────
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: netscout-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # ─── Local Network Agent ─────────────────────────────────
+  # NOTE: The agent needs host networking + NET_ADMIN/NET_RAW
+  # to perform real ARP/ICMP/nmap scans on your local network.
+  # Run this on a machine physically on the network you want to scan.
+  agent:
+    build:
+      context: ../agent
+      dockerfile: Dockerfile
+    container_name: netscout-agent
+    restart: unless-stopped
+    network_mode: host          # Must use host networking for ARP scanning
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      BACKEND_WS_URL: ${BACKEND_WS_URL:-ws://localhost:8000/ws/agent}
+      BACKEND_API_URL: ${BACKEND_API_URL:-http://localhost:8000}
+      AGENT_TOKEN: ${AGENT_TOKEN:-change-me-in-production}
+      AGENT_ID: ${AGENT_ID:-agent-001}
+      SCAN_INTERVAL_SECONDS: ${SCAN_INTERVAL_SECONDS:-60}
+      ENABLE_PORT_SCAN: ${ENABLE_PORT_SCAN:-true}
+      ENABLE_OS_DETECTION: ${ENABLE_OS_DETECTION:-true}
+      ENABLE_MDNS: ${ENABLE_MDNS:-true}
+      # Set these if auto-detection fails:
+      # NETWORK_INTERFACE: eth0
+      # NETWORK_CIDR: 192.168.1.0/24
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,13 @@
+scapy==2.5.0
+python-nmap==0.7.1
+zeroconf==0.131.0
+websockets==12.0
+aiohttp==3.9.3
+asyncio-mqtt==0.16.1
+apscheduler==3.10.4
+requests==2.31.0
+netifaces==0.11.0
+psutil==5.9.8
+colorlog==6.8.2
+python-dotenv==1.0.1
+netaddr==0.10.1

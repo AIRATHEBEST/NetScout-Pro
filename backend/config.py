@@ -1,29 +1,33 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
+from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    # App
-    APP_NAME: str = "NetScout"
-    DEBUG: bool = False
-    SECRET_KEY: str = "change-me-in-production-use-a-long-random-string"
+    # ── Database (Supabase PostgreSQL) ───────────────────────
+    # Format: postgresql+asyncpg://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres
+    DATABASE_URL: str = "postgresql+asyncpg://postgres:your-password@db.jqteahtqwffjenserypk.supabase.co:5432/postgres"
+
+    # ── Supabase direct config (optional — for REST API use) ─
+    SUPABASE_URL: str = "https://jqteahtqwffjenserypk.supabase.co"
+    SUPABASE_SERVICE_KEY: str = ""   # Set via env var — never hardcode
+
+    # ── Redis (use Upstash for serverless, or keep local) ────
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # ── Security ─────────────────────────────────────────────
     AGENT_TOKEN: str = "change-me-in-production"
+    SECRET_KEY: str = "change-me-in-production"
 
-    # Database
-    DATABASE_URL: str = "postgresql+asyncpg://netscout:netscout@postgres:5432/netscout"
-
-    # Redis
-    REDIS_URL: str = "redis://redis:6379/0"
-
-    # JWT
-    JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 1440  # 24 hours
-
-    # CORS
-    CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:5173"]
+    # ── App ──────────────────────────────────────────────────
+    APP_NAME: str = "NetScout Pro"
+    DEBUG: bool = False
+    ALLOWED_ORIGINS: list[str] = ["*"]
 
     class Config:
         env_file = ".env"
+        env_file_encoding = "utf-8"
 
 
-settings = Settings()
+@lru_cache()
+def get_settings() -> Settings:
+    return Settings()

@@ -6,8 +6,14 @@ from config import settings
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
-    pool_size=10,
-    max_overflow=20,
+    # Supabase pooler compatible — no pool_size/max_overflow with asyncpg
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=10,
+    connect_args={
+        "statement_cache_size": 0,   # Required for Supabase PgBouncer pooler
+        "prepared_statement_cache_size": 0,
+    },
 )
 
 AsyncSessionLocal = async_sessionmaker(

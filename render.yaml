@@ -10,16 +10,13 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        sync: false   # Set manually in Render dashboard
+        sync: false   # Set manually: Supabase > Settings > Database > Connection string
       - key: SUPABASE_URL
         value: https://jqteahtqwffjenserypk.supabase.co
       - key: SUPABASE_SERVICE_KEY
-        sync: false   # Set manually in Render dashboard
+        sync: false   # Set manually: Supabase > Settings > API > service_role key
       - key: REDIS_URL
-        fromService:
-          name: netscout-pro-redis
-          type: redis
-          property: connectionString
+        sync: false   # Set manually: paste your Upstash Redis URL here
       - key: AGENT_TOKEN
         generateValue: true
       - key: SECRET_KEY
@@ -45,12 +42,3 @@ services:
       - type: rewrite
         source: /*
         destination: /index.html
-
-  # ─── Redis ────────────────────────────────────────────────
-  - type: redis
-    name: netscout-pro-redis
-    plan: free
-    maxmemoryPolicy: allkeys-lru
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: Allow all (internal use only)

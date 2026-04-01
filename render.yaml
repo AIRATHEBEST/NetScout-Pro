@@ -16,7 +16,10 @@ services:
       - key: SUPABASE_SERVICE_KEY
         sync: false   # Set manually in Render dashboard
       - key: REDIS_URL
-        sync: false   # Set manually (use Render Redis or Upstash)
+        fromService:
+          name: netscout-pro-redis
+          type: redis
+          property: connectionString
       - key: AGENT_TOKEN
         generateValue: true
       - key: SECRET_KEY
@@ -48,3 +51,6 @@ services:
     name: netscout-pro-redis
     plan: free
     maxmemoryPolicy: allkeys-lru
+    ipAllowList:
+      - source: 0.0.0.0/0
+        description: Allow all (internal use only)
